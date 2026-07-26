@@ -1,17 +1,20 @@
 import pandas as pd
 import numpy as np
 import pickle
+
 from sklearn.pipeline import Pipeline
 from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LinearRegression
 
-#df = pd.read_csv("Bengaluru_House_Data.csv")
-df = pd.read_csv(r"C:\Users\luvku\Downloads\archive (9)\Bengaluru_House_Data.csv")
+# Load dataset
+df = pd.read_csv("Bengaluru_House_Data.csv")
 
+# Keep required columns
 df = df[["location", "total_sqft", "bath", "balcony", "price"]]
 
+# Convert total_sqft to numeric
 def convert_sqft(value):
     try:
         return float(str(value).split("-")[0])
@@ -20,36 +23,43 @@ def convert_sqft(value):
 
 df["total_sqft"] = df["total_sqft"].apply(convert_sqft)
 
-df = df.dropna(subset=["price"])
+# Remove rows with missing values
+df.dropna(subset=["price"], inplace=True)
 
+# Features and target
 X = df[["location", "total_sqft", "bath", "balcony"]]
 y = df["price"]
 
-numerical_features = ["total_sqft", "bath", "balcony"]
-categorical_features = ["location"]
-
+# Preprocessing
 preprocessor = ColumnTransformer(
     transformers=[
-        ("num", SimpleImputer(strategy="median"), numerical_features),
+        (
+            "num",
+            SimpleImputer(strategy="median"),
+            ["total_sqft", "bath", "balcony"]
+        ),
         (
             "cat",
             Pipeline([
                 ("imputer", SimpleImputer(strategy="most_frequent")),
                 ("encoder", OneHotEncoder(handle_unknown="ignore"))
             ]),
-            categorical_features
+            ["location"]
         )
     ]
 )
 
+# Model
 model = Pipeline([
     ("preprocessor", preprocessor),
     ("regressor", LinearRegression())
 ])
 
+# Train
 model.fit(X, y)
 
-with open("house_price_model.pkl", "wb") as file:
-    pickle.dump(model, file)
+# Save model
+with open("house_price_model.pkl", "wb") as f:
+    pickle.dump(model, f)
 
-print("Model saved successfully")
+print("✅ Model trained and saved successfully!")
